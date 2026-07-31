@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rekapitulasi - Absensi Wajah SDN 4 Banda Aceh</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+  
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  
+  <style>
+    .table-rekap th, .table-rekap td {
+      text-align: center;
+      vertical-align: middle;
+      font-size: 0.85rem;
+    }
+    .table-rekap th {
+      background-color: var(--primary-color) !important;
+      color: white !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <!-- ... same sidebar ... -->
+    <div class="sidebar-header">
+      <i class="bi bi-shield-lock-fill text-primary-custom" style="font-size: 2rem;"></i>
+      <div>
+        <h6 class="mb-0 fw-bold">SDN 4 Banda Aceh</h6>
+        <small class="text-muted">Enterprise 2026</small>
+      </div>
+    </div>
+    
+    <div class="py-3">
+      <ul class="nav flex-column">
+        <li class="nav-item">
+          <a class="nav-link" href="dashboard.html"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+        </li>
+        <li class="nav-item mt-3 mb-1 px-4 text-muted small fw-bold">MODUL ABSENSI</li>
+        <li class="nav-item">
+          <a class="nav-link" href="absensi.html"><i class="bi bi-camera-fill"></i> Presensi Wajah</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="izin.html"><i class="bi bi-envelope-paper-fill"></i> Pengajuan Izin</a>
+        </li>
+        
+        <li class="nav-item mt-3 mb-1 px-4 text-muted small fw-bold">MANAJEMEN</li>
+        <li class="nav-item">
+          <a class="nav-link" href="pegawai.html"><i class="bi bi-people-fill"></i> Data Pegawai</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="absen-manual.html"><i class="bi bi-person-check-fill"></i> Absen Manual</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" href="rekapitulasi.html"><i class="bi bi-table"></i> Rekapitulasi</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="laporan.html"><i class="bi bi-file-earmark-bar-graph-fill"></i> Laporan</a>
+        </li>
+        
+        <li class="nav-item mt-3 mb-1 px-4 text-muted small fw-bold">PENGATURAN</li>
+        <li class="nav-item">
+          <a class="nav-link" href="geofencing.html"><i class="bi bi-geo-alt-fill"></i> Geofencing</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="tugas-luar.html"><i class="bi bi-pin-map-fill"></i> Tugas Luar</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="jam-kerja.html"><i class="bi bi-clock-fill"></i> Jam Kerja</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="hari-libur.html"><i class="bi bi-calendar-event-fill"></i> Hari Libur</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="pengguna.html"><i class="bi bi-person-badge-fill"></i> Pengguna</a>
+        </li>
+        <li class="nav-item d-none" id="menuProfilSekolah">
+          <a class="nav-link" href="pengaturan.html"><i class="bi bi-building"></i> Profil Sekolah</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" onclick="logout()"><i class="bi bi-box-arrow-left text-danger"></i> Logout</a>
+        </li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content" id="mainContent">
+    <nav class="top-navbar">
+      <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-light d-lg-none" id="sidebarToggle">
+          <i class="bi bi-list"></i>
+        </button>
+        <h4 class="mb-0 fw-bold">Rekapitulasi Perorangan</h4>
+      </div>
+      
+      <div class="d-flex align-items-center gap-4">
+        <button class="btn btn-light rounded-circle" id="darkModeToggle">
+          <i class="bi bi-moon-stars-fill"></i>
+        </button>
+      </div>
+    </nav>
+
+    <div class="container-fluid p-0">
+      
+      <div class="glass-card p-4 mb-4" data-aos="fade-up">
+        <form class="row g-3 align-items-end" id="filterForm">
+          <div class="col-md-2">
+            <label class="form-label">Bulan</label>
+            <select class="form-select form-control-md3" id="filterBulan">
+              <option value="01">Januari</option>
+              <option value="02">Februari</option>
+              <option value="03">Maret</option>
+              <option value="04">April</option>
+              <option value="05">Mei</option>
+              <option value="06">Juni</option>
+              <option value="07" selected>Juli</option>
+              <option value="08">Agustus</option>
+              <option value="09">September</option>
+              <option value="10">Oktober</option>
+              <option value="11">November</option>
+              <option value="12">Desember</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Tahun</label>
+            <select class="form-select form-control-md3" id="filterTahun">
+              <option value="2025">2025</option>
+              <option value="2026" selected>2026</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Jenis Pegawai</label>
+            <select class="form-select form-control-md3" id="filterJenisPegawai">
+              <option value="Semua" selected>Semua</option>
+              <option value="PNS">PNS</option>
+              <option value="PPPK">PPPK</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Jenis Laporan</label>
+            <select class="form-select form-control-md3" id="jenisLaporan">
+              <option value="detail" selected>Rekap Detail</option>
+              <option value="sertifikasi">Laporan Sertifikasi</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button type="button" class="btn btn-primary-custom w-100" id="btnFilter"><i class="bi bi-search me-2"></i>Filter</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="glass-card p-4" data-aos="fade-up" data-aos-delay="100">
+        <div id="containerRekapDetail">
+          <div class="table-responsive">
+            <table id="tableRekap" class="table table-hover align-middle table-rekap">
+              <thead class="table-light">
+                <tr>
+                  <th class="text-center" width="5%">No</th>
+                  <th width="20%">Nama Pegawai / NIP</th>
+                  <th width="15%">Jabatan</th>
+                  <th class="text-center" width="10%">Status</th>
+                  <th class="text-center" width="7%">H.Kerja</th>
+                  <th class="text-center" width="7%">Hadir</th>
+                  <th class="text-center" width="9%">Telat/Cepat</th>
+                  <th class="text-center" width="9%">Tanpa Ket.</th>
+                  <th class="text-center" width="9%">Cuti/Izin</th>
+                  <th class="text-center" width="9%">Persentase</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Data akan diisi oleh API secara dinamis -->
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="mt-4 small text-muted bg-light p-3 rounded shadow-sm border border-light">
+            <h6 class="fw-bold mb-2 text-primary-custom"><i class="bi bi-info-circle-fill me-2"></i>Keterangan Kolom:</h6>
+            <div class="row">
+              <div class="col-md-4">
+                <ul class="list-unstyled mb-0">
+                  <li><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Hadir:</strong> Kehadiran penuh di hari tersebut.</li>
+                  <li><i class="bi bi-clock-history text-secondary me-2"></i><strong>Telat/Cepat:</strong> Hadir namun terlambat atau pulang lebih awal.</li>
+                </ul>
+              </div>
+              <div class="col-md-4">
+                <ul class="list-unstyled mb-0">
+                  <li><i class="bi bi-x-circle-fill text-danger me-2"></i><strong>Tanpa Ket.:</strong> Alpa / Tidak ada keterangan sama sekali.</li>
+                  <li><i class="bi bi-calendar-check-fill text-info me-2"></i><strong>Cuti/Izin:</strong> Cuti Tahunan, Sakit, Alasan Penting, dll.</li>
+                </ul>
+              </div>
+              <div class="col-md-4">
+                <ul class="list-unstyled mb-0">
+                  <li><i class="bi bi-briefcase-fill text-primary me-2"></i><strong>Dinas:</strong> Tugas Dinas Dalam atau Dinas Luar Kota.</li>
+                  <li><i class="bi bi-percent text-warning me-2"></i><strong>Persentase:</strong> Tingkat kehadiran dibanding hari kerja.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-none" id="containerRekapSertifikasi">
+          <div class="table-responsive">
+            <table id="tableRekapSertifikasi" class="table table-hover align-middle table-bordered table-rekap w-100">
+              <thead class="table-light">
+                <tr id="headerSertifikasi">
+                  <!-- dynamic header -->
+                </tr>
+              </thead>
+              <tbody>
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-4 small text-muted bg-light p-3 rounded border border-light">
+            <h6 class="fw-bold mb-2 text-primary-custom">Keterangan Sertifikasi:</h6>
+            <div class="d-flex flex-wrap gap-4">
+              <div><strong>H</strong> = Hadir (Melakukan presensi minimal sekali)</div>
+              <div><strong>L</strong> = Libur (Hari libur mingguan atau nasional)</div>
+              <div><strong>S</strong> = Sakit (Sesuai surat keterangan)</div>
+              <div><strong>I</strong> = Izin / Cuti (Telah disetujui)</div>
+              <div><strong>A</strong> = Tanpa Keterangan / Alpa</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+  <!-- DataTables Buttons -->
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+  
+  <script src="assets/js/app.js?v=2"></script>
+  <script src="assets/js/auth.js?v=2"></script>
+  <script src="assets/js/rekapitulasi.js?v=3"></script>
+</body>
+</html>

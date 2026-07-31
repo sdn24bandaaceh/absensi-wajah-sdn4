@@ -1,0 +1,118 @@
+:root {
+  --primary-color: #0F172A; /* Modern Navy Blue */
+  --secondary-color: #FFFFFF;
+  --accent-color: #F59E0B; /* Gold/Amber */
+  --success-color: #10B981; /* Emerald Green */
+  --danger-color: #EF4444; /* Red */
+  --warning-color: #F97316; /* Orange */
+  --info-color: #0EA5E9; /* Sky Blue */
+  --text-color: #334155;
+  --bg-color: #F8FAFC;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+body.dark-mode {
+  --primary-color: #1E293B; /* Lighter Navy for Dark Mode */
+  --secondary-color: #0F172A;
+  --text-color: #F8FAFC;
+  --bg-color: #020617;
+  --glass-bg: rgba(15, 23, 42, 0.7);
+  --glass-border: rgba(30, 41, 59, 0.5);
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism Classes */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Material Design 3 Input */
+.form-control-md3 {
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  transition: all 0.2s ease;
+}
+
+body.dark-mode .form-control-md3 {
+  background-color: rgba(15, 23, 42, 0.8);
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
+.form-control-md3:focus {
+  background-color: #FFFFFF;
+  border-color: var(--info-color);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+}
+
+body.dark-mode .form-control-md3:focus {
+  background-color: #0F172A;
+}
+
+/* Buttons */
+.btn-primary-custom {
+  background-color: var(--primary-color);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary-custom:hover {
+  background-color: #1E293B;
+  color: #FFFFFF;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Micro Interactions */
+.hover-scale {
+  transition: transform 0.2s ease;
+}
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+/* Skeleton Loading */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeletonLoading 1.5s infinite;
+  border-radius: 8px;
+}
+
+body.dark-mode .skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+}
+
+@keyframes skeletonLoading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Utilities */
+.text-primary-custom { color: var(--primary-color) !important; }
+.text-accent { color: var(--accent-color) !important; }
+.bg-primary-custom { background-color: var(--primary-color) !important; }
+.bg-accent { background-color: var(--accent-color) !important; }

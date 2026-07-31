@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Absen Manual - Absensi Wajah SDN 4 Banda Aceh</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css">
+  
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <i class="bi bi-shield-lock-fill text-primary-custom" style="font-size: 2rem;"></i>
+      <div>
+        <h6 class="mb-0 fw-bold" id="sidebarSchoolName">SDN 4 Banda Aceh</h6>
+        <small class="text-muted">Enterprise 2026</small>
+      </div>
+    </div>
+    
+    <div class="py-3">
+      <ul class="nav flex-column">
+        <li class="nav-item">
+          <a class="nav-link" href="dashboard.html"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+        </li>
+        <li class="nav-item mt-3 mb-1 px-4 text-muted small fw-bold">MODUL ABSENSI</li>
+        <li class="nav-item">
+          <a class="nav-link" href="absensi.html"><i class="bi bi-camera-fill"></i> Presensi Wajah</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="izin.html"><i class="bi bi-envelope-paper-fill"></i> Pengajuan Izin</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="riwayat.html"><i class="bi bi-clock-history"></i> Riwayat Absensi</a>
+        </li>
+        
+        <li class="nav-item mt-3 mb-1 px-4 text-muted small fw-bold">MANAJEMEN</li>
+        <li class="nav-item">
+          <a class="nav-link" href="pegawai.html"><i class="bi bi-people-fill"></i> Data Pegawai</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" href="absen-manual.html"><i class="bi bi-person-check-fill"></i> Absen Manual</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="rekapitulasi.html"><i class="bi bi-table"></i> Rekapitulasi</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="laporan.html"><i class="bi bi-file-earmark-bar-graph-fill"></i> Laporan</a>
+        </li>
+        
+        <li class="nav-item mt-3 mb-1 px-4 text-muted small fw-bold">PENGATURAN</li>
+        <li class="nav-item">
+          <a class="nav-link" href="geofencing.html"><i class="bi bi-geo-alt-fill"></i> Geofencing</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="tugas-luar.html"><i class="bi bi-pin-map-fill"></i> Tugas Luar</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="jam-kerja.html"><i class="bi bi-clock-fill"></i> Jam Kerja</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="hari-libur.html"><i class="bi bi-calendar-event-fill"></i> Hari Libur</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="pengguna.html"><i class="bi bi-person-badge-fill"></i> Pengguna</a>
+        </li>
+        <li class="nav-item d-none" id="menuProfilSekolah">
+          <a class="nav-link" href="pengaturan.html"><i class="bi bi-building"></i> Profil Sekolah</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" onclick="logout()"><i class="bi bi-box-arrow-left text-danger"></i> Logout</a>
+        </li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content" id="mainContent">
+    <nav class="top-navbar">
+      <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-light d-lg-none" id="sidebarToggle">
+          <i class="bi bi-list"></i>
+        </button>
+        <h4 class="mb-0 fw-bold">Absen Manual (Admin)</h4>
+      </div>
+      
+      <div class="d-flex align-items-center gap-4">
+        <button class="btn btn-light rounded-circle" id="darkModeToggle">
+          <i class="bi bi-moon-stars-fill"></i>
+        </button>
+      </div>
+    </nav>
+
+    <div class="container-fluid p-0">
+      <div class="row justify-content-center">
+        <div class="col-12 col-lg-8" data-aos="fade-up">
+          <div class="glass-card p-4">
+            <div class="d-flex align-items-center gap-3 mb-4">
+              <div class="bg-primary-custom text-white p-3 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                <i class="bi bi-person-check-fill fs-4"></i>
+              </div>
+              <div>
+                <h5 class="fw-bold mb-0">Input Kehadiran Manual</h5>
+                <small class="text-muted">Fasilitas khusus Admin jika pegawai gagal absen atau sistem bermasalah.</small>
+              </div>
+            </div>
+
+            <form id="formAbsenManual">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label fw-bold">Pilih Pegawai <span class="text-danger">*</span></label>
+                  <select class="form-select" id="am_pegawai" required>
+                    <option value="" disabled selected>Memuat daftar pegawai...</option>
+                  </select>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Tanggal <span class="text-danger">*</span></label>
+                  <input type="date" class="form-control" id="am_tanggal" required>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Jam <span class="text-danger">*</span></label>
+                  <input type="time" class="form-control" id="am_jam" required>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Status Absen <span class="text-danger">*</span></label>
+                  <select class="form-select" id="am_status" required>
+                    <option value="Masuk">Masuk</option>
+                    <option value="Pulang">Pulang</option>
+                  </select>
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">Keterangan Khusus</label>
+                  <input type="text" class="form-control" id="am_keterangan" placeholder="Contoh: Mesin absen error / Lupa absen" value="Lupa absen">
+                </div>
+              </div>
+              
+              <hr class="my-4 border-light">
+              
+              <div class="text-end">
+                <button type="submit" class="btn btn-primary-custom" id="btnSimpanAbsen">
+                  <i class="bi bi-save me-2"></i> Simpan Kehadiran
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
+  
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/dashboard.js"></script>
+  <script src="assets/js/absen-manual.js"></script>
+</body>
+</html>
