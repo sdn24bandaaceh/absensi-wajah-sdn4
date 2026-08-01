@@ -56,7 +56,7 @@ function loadPegawai() {
   });
 }
 
-function submitManualAbsen() {
+function submitManualAbsen(forceEdit = false) {
   const username = document.getElementById('am_pegawai').value;
   const date = document.getElementById('am_tanggal').value;
   const time = document.getElementById('am_jam').value;
@@ -77,7 +77,8 @@ function submitManualAbsen() {
     date: date,
     time: time,
     status: status,
-    keterangan: keterangan
+    keterangan: keterangan,
+    forceEdit: forceEdit
   };
 
   const btn = document.getElementById('btnSimpanAbsen');
@@ -93,10 +94,25 @@ function submitManualAbsen() {
       Swal.fire({
         icon: 'success',
         title: 'Berhasil!',
-        text: 'Kehadiran manual berhasil disimpan.',
+        text: res.message || 'Kehadiran manual berhasil disimpan.',
         confirmButtonColor: '#10B981'
       }).then(() => {
         document.getElementById('am_keterangan').value = 'Lupa absen'; // reset ket
+      });
+    } else if (res && res.requireConfirmation) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Data Sudah Ada',
+        text: 'Apakah Anda akan mengedit jamnya saja?',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Edit Jam',
+        cancelButtonText: 'Tidak, Batal',
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          submitManualAbsen(true);
+        }
       });
     } else {
       App.showToast(res.message || 'Gagal menyimpan absensi manual', 'error');

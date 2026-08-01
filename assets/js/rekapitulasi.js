@@ -86,6 +86,13 @@ $(document).ready(function() {
     const daysInMonth = getDaysInMonth(parseInt(year), parseInt(month));
     let totalKerja = 0;
     
+    const now = new Date();
+    const isCurrentMonthYear = (parseInt(year) === now.getFullYear() && parseInt(month) === (now.getMonth() + 1));
+    const currentDate = now.getDate();
+    let totalKerjaBerjalan = 0;
+    
+    let calendarDays = [];
+    
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${year}-${month}-${String(d).padStart(2, '0')}`;
       const dateObj = new Date(dateStr);
@@ -114,7 +121,17 @@ $(document).ready(function() {
       
       if (!isHoliday) {
         totalKerja++;
+        if (!isCurrentMonthYear || d <= currentDate) {
+          totalKerjaBerjalan++;
+        }
       }
+      
+      calendarDays.push({
+        date: dateStr,
+        dayNum: d,
+        isHoliday: isHoliday,
+        isPastOrToday: (!isCurrentMonthYear || d <= currentDate)
+      });
     }
     
     let index = 1;
@@ -123,39 +140,57 @@ $(document).ready(function() {
     if (data.users && data.users.length > 0) {
       data.users.forEach(u => {
         try {
-          if (u.role === 'Admin' || u.status === 'Admin' || u.role === 'superadmin') return;
+          if (u.role === 'superadmin') return;
           if (typeFilter !== 'Semua' && u.status !== typeFilter) return;
         
-          let hadirLengkap = 0;
-          let sakit = 0;
-          let cutiTahunan = 0;
+          let countH = 0;
+          let countS = 0;
+          let countI = 0;
+          let countA = 0;
           
-          if (data.attendance && data.attendance.length > 0) {
-            data.attendance.forEach(a => {
-              if (a.username === u.username || a.username === u.nip) {
-                const dateStr = a.timestamp ? String(a.timestamp).split(',')[0].split('T')[0] : '';
-                if (dateStr.startsWith(`${year}-${month}`)) {
-                  hadirLengkap++;
+          calendarDays.forEach(day => {
+            if (day.isHoliday) return;
+            if (!day.isPastOrToday) return;
+            
+            let isSakit = false;
+            let isIzin = false;
+            
+            if (data.permits && data.permits.length > 0) {
+              for (const p of data.permits) {
+                if ((p.username === u.username || p.username === u.nip) && p.status === 'Disetujui') {
+                  const dStart = p.tanggalMulai ? String(p.tanggalMulai).split('T')[0] : '';
+                  const dEnd = p.tanggalSelesai ? String(p.tanggalSelesai).split('T')[0] : dStart;
+                  if (day.date >= dStart && day.date <= dEnd) {
+                    const tipe = p.tipe ? String(p.tipe).toLowerCase() : '';
+                    if (tipe.includes('sakit')) isSakit = true;
+                    else isIzin = true;
+                    break;
+                  }
                 }
               }
-            });
-          }
+            }
+            
+            if (isSakit) { countS++; }
+            else if (isIzin) { countI++; }
+            else {
+              let hasAttended = false;
+              if (data.attendance && data.attendance.length > 0) {
+                for (const a of data.attendance) {
+                  if (a.username === u.username || a.username === u.nip) {
+                    const aDate = a.timestamp ? String(a.timestamp).split(',')[0].split('T')[0] : '';
+                    if (aDate === day.date) {
+                      hasAttended = true;
+                      break;
+                    }
+                  }
+                }
+              }
+              if (hasAttended) { countH++; }
+              else { countA++; }
+            }
+          });
           
-          if (data.permits && data.permits.length > 0) {
-            data.permits.forEach(p => {
-               if ((p.username === u.username || p.username === u.nip) && p.status === 'Disetujui') {
-                 const dateStr = p.tanggalMulai ? String(p.tanggalMulai).split('T')[0] : '';
-                 if (dateStr.startsWith(`${year}-${month}`)) {
-                   const tipe = p.tipe ? String(p.tipe).toLowerCase() : '';
-                   if(tipe.includes('sakit')) sakit++;
-                   else cutiTahunan++;
-                 }
-               }
-            });
-          }
-          
-          let tKet = Math.max(0, totalKerja - hadirLengkap - sakit - cutiTahunan);
-          let percentage = totalKerja > 0 ? ((hadirLengkap / totalKerja) * 100).toFixed(1) : "0.0";
+          let percentage = totalKerjaBerjalan > 0 ? ((countH / totalKerjaBerjalan) * 100).toFixed(1) : "0.0";
           let badgeColor = percentage >= 80 ? 'bg-success' : (percentage >= 50 ? 'bg-warning text-dark' : 'bg-danger');
           
           tbodyHtml += `
@@ -170,10 +205,10 @@ $(document).ready(function() {
               <td class="align-middle">${u.jabatan || '-'}</td>
               <td class="text-center align-middle"><span class="badge bg-primary rounded-pill px-3 py-1 shadow-sm">${u.status || '-'}</span></td>
               <td class="text-center align-middle fw-bold text-dark">${totalKerja}</td>
-              <td class="text-center align-middle"><span class="badge bg-success rounded-pill px-3 py-2">${hadirLengkap} Hari</span></td>
+              <td class="text-center align-middle"><span class="badge bg-success rounded-pill px-3 py-2">${countH} Hari</span></td>
               <td class="text-center align-middle"><span class="badge bg-secondary rounded-pill px-3 py-2">0 Hari</span></td>
-              <td class="text-center align-middle"><span class="badge bg-danger rounded-pill px-3 py-2">${tKet} Hari</span></td>
-              <td class="text-center align-middle"><span class="badge bg-info rounded-pill px-3 py-2 text-dark">${cutiTahunan + sakit} Hari</span></td>
+              <td class="text-center align-middle"><span class="badge bg-danger rounded-pill px-3 py-2">${countA} Hari</span></td>
+              <td class="text-center align-middle"><span class="badge bg-info rounded-pill px-3 py-2 text-dark">${countS + countI} Hari</span></td>
               <td class="text-center align-middle"><span class="badge ${badgeColor} rounded-pill px-3 py-2 shadow-sm" style="font-size: 0.9rem;">${percentage}%</span></td>
             </tr>
           `;
@@ -350,7 +385,7 @@ $(document).ready(function() {
     if (data.users && data.users.length > 0) {
       data.users.forEach(u => {
         try {
-          if (u.role === 'superadmin' || u.role === 'Admin') return;
+          if (u.role === 'superadmin') return;
           if (typeFilter !== 'Semua' && u.status !== typeFilter) return;
         
           let totalHariKerja = 0;
@@ -374,13 +409,20 @@ $(document).ready(function() {
           let countI = 0;
           let countA = 0;
 
+          const now = new Date();
+          const isCurrentMonthYear = (parseInt(year) === now.getFullYear() && parseInt(month) === (now.getMonth() + 1));
+          const currentDate = now.getDate();
+
           calendarDays.forEach(day => {
             if (!day.isHoliday) totalHariKerja++; // Increment working days total
             
             let status = 'A'; // Default Alpa/Tanpa Keterangan
+            const isPastOrToday = (!isCurrentMonthYear || day.dayNum <= currentDate);
             
             if (day.isHoliday) {
               status = 'L';
+            } else if (!isPastOrToday) {
+              status = '-'; // Future day
             } else {
               // Check Permits/Cuti
               let isSakit = false;
@@ -433,7 +475,7 @@ $(document).ready(function() {
             else if (status === 'I') countI++;
             else if (status === 'A') countA++;
             
-            let textColor = status === 'L' ? 'text-danger fw-bold' : (status === 'S' || status === 'I' ? 'text-warning fw-bold' : (status === 'A' ? 'text-secondary' : 'text-success fw-bold'));
+            let textColor = status === 'L' ? 'text-danger fw-bold' : (status === 'S' || status === 'I' ? 'text-warning fw-bold' : (status === 'A' ? 'text-secondary' : (status === '-' ? 'text-muted' : 'text-success fw-bold')));
             tdDays += `<td class="text-center align-middle ${textColor}">${status}</td>`;
           });
           

@@ -679,6 +679,24 @@ function doPost(e) {
       const sheetSettings = ss.getSheetByName(SHEET_SETTINGS);
       const settingsData = sheetSettings.getDataRange().getValues();
       
+      // Kalkulasi Waktu Server (GMT+7)
+      const serverTimeStr = new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"});
+      const serverDate = new Date(serverTimeStr);
+      const todayIso = serverDate.getFullYear() + "-" + String(serverDate.getMonth()+1).padStart(2, '0') + "-" + String(serverDate.getDate()).padStart(2, '0');
+      
+      // Mencegah input ganda (dobel) untuk user biasa
+      const dataAtt = sheet.getDataRange().getValues();
+      for (let i = 1; i < dataAtt.length; i++) {
+        if (dataAtt[i][1] === (payload.username || payload.user_id || "")) {
+          if (dataAtt[i][3] === (payload.status || "")) {
+            const rowDate = dataAtt[i][0] ? String(dataAtt[i][0]).split(',')[0].replace("'", "").split('T')[0] : "";
+            if (rowDate === todayIso) {
+              return output.setContent(JSON.stringify({ success: false, message: "Anda sudah melakukan absensi " + payload.status + " hari ini!" }));
+            }
+          }
+        }
+      }
+      
       let schoolLat = 5.5414;
       let schoolLng = 95.3146;
       let maxRadius = 100;
@@ -721,11 +739,9 @@ function doPost(e) {
       }
       
       // Kalkulasi Waktu Server (GMT+7)
-      const serverTimeStr = new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"});
-      const serverDate = new Date(serverTimeStr);
+      // (Variabel serverTimeStr, serverDate, todayIso sudah dideklarasikan di awal)
       const dayOfWeek = serverDate.getDay();
       const currentMins = serverDate.getHours() * 60 + serverDate.getMinutes();
-      const todayIso = serverDate.getFullYear() + "-" + String(serverDate.getMonth()+1).padStart(2, '0') + "-" + String(serverDate.getDate()).padStart(2, '0');
       const currentTimeStr = String(serverDate.getHours()).padStart(2, '0') + ":" + String(serverDate.getMinutes()).padStart(2, '0') + ":" + String(serverDate.getSeconds()).padStart(2, '0');
       const timestamp = "'" + todayIso + ", " + currentTimeStr;
 
@@ -850,9 +866,40 @@ function doPost(e) {
       
       const payloadDate = payload.date; // YYYY-MM-DD
       const payloadTime = payload.time; // HH:MM
-      
       const timestamp = "'" + payloadDate + ", " + payloadTime + ":00";
       const keterangan = payload.keterangan || "Absen Manual (Admin)";
+      
+      // Mencegah input ganda (dobel) atau meminta konfirmasi Edit
+      let existingRowIndex = -1;
+      const dataAtt = sheet.getDataRange().getValues();
+      for (let i = 1; i < dataAtt.length; i++) {
+        if (dataAtt[i][1] === (payload.username || "")) {
+          if (dataAtt[i][3] === (payload.status || "")) {
+            const rowDate = dataAtt[i][0] ? String(dataAtt[i][0]).split(',')[0].replace("'", "").split('T')[0] : "";
+            if (rowDate === payloadDate) {
+              existingRowIndex = i + 1; // baris di Google Sheets dimulai dari 1
+              break;
+            }
+          }
+        }
+      }
+      
+      if (existingRowIndex !== -1) {
+        if (payload.forceEdit) {
+          // Edit jam absensi dan keterangan di baris yang sudah ada
+          sheet.getRange(existingRowIndex, 1).setValue(timestamp);
+          sheet.getRange(existingRowIndex, 5).setValue(keterangan);
+          sheet.getRange(existingRowIndex, 6).setValue("Manual (Admin)");
+          return output.setContent(JSON.stringify({ success: true, message: "Jam absensi " + payload.status + " manual berhasil diperbarui." }));
+        } else {
+          // Kembalikan peringatan untuk minta konfirmasi
+          return output.setContent(JSON.stringify({ 
+            success: false, 
+            requireConfirmation: true, 
+            message: "Absensi " + payload.status + " untuk pegawai ini pada tanggal tersebut sudah ada!" 
+          }));
+        }
+      }
       
       smartAppendRow(sheet, [
         timestamp,
