@@ -4,6 +4,7 @@ let maxRadius = 100;
 let weeklySchedule = null;
 let hasAbsenMasuk = false;
 let hasAbsenPulang = false;
+let activeTugasLuarList = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   const userName = localStorage.getItem('userName') || 'Pegawai';
@@ -51,6 +52,28 @@ document.addEventListener('DOMContentLoaded', () => {
           } catch(e) { console.error(e); }
         }
       }
+      if (res.data.tugasLuar) {
+        const userId = localStorage.getItem('userId');
+        const d = new Date();
+        const todayIso = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0');
+        
+        res.data.tugasLuar.forEach(tl => {
+           const startStr = String(tl.tanggalMulai).split('T')[0];
+           const endStr = String(tl.tanggalSelesai).split('T')[0];
+           
+           if (todayIso >= startStr && todayIso <= endStr) {
+              if (tl.pegawai && tl.pegawai.includes(userId)) {
+                 activeTugasLuarList.push({
+                    nama: tl.namaTugas,
+                    lat: parseFloat(String(tl.lat).replace("'", "")),
+                    lng: parseFloat(String(tl.lng).replace("'", "")),
+                    radius: parseInt(tl.radius)
+                 });
+              }
+           }
+        });
+      }
+
       if (res.data.attendance) {
         const todayStr = new Date().toISOString().split('T')[0];
         const userId = localStorage.getItem('userId');
@@ -123,7 +146,7 @@ async function initCamera() {
       setTimeout(() => {
         statusBadge.innerHTML = '<i class="bi bi-person-bounding-box me-1"></i> Wajah Terdeteksi';
         checkReadyState();
-      }, 2000);
+      }, 300);
     };
   } catch (err) {
     console.error("Camera error:", err);
@@ -152,7 +175,7 @@ function initMap() {
     fillColor: '#f03',
     fillOpacity: 0.1,
     radius: maxRadius
-  }).addTo(map).bindPopup("Area SD Negeri 4 Banda Aceh");
+  }).addTo(map).bindPopup("Area SD Negeri 24 Banda Aceh");
 
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
@@ -170,13 +193,44 @@ function initMap() {
         // Calculate Distance (Haversine formula approximated by Leaflet)
         const schoolLatLng = L.latLng(schoolLocation.lat, schoolLocation.lng);
         const userLatLng = L.latLng(userLocation.lat, userLocation.lng);
-        const distance = userLatLng.distanceTo(schoolLatLng);
+        const distanceToSchool = userLatLng.distanceTo(schoolLatLng);
         
-        if (distance <= maxRadius) {
-          locStatus.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i> Lokasi valid (${Math.round(distance)}m)`;
+        let isValidLocation = false;
+        let locMessage = "";
+        
+        if (distanceToSchool <= maxRadius) {
+          isValidLocation = true;
+          locMessage = `Lokasi valid (${Math.round(distanceToSchool)}m)`;
+        } else if (activeTugasLuarList.length > 0) {
+          let foundValidTl = null;
+          let shortestDistance = Infinity;
+          
+          for (let tl of activeTugasLuarList) {
+             const tlLatLng = L.latLng(tl.lat, tl.lng);
+             const dist = userLatLng.distanceTo(tlLatLng);
+             if (dist < shortestDistance) shortestDistance = dist;
+             
+             if (dist <= tl.radius) {
+                foundValidTl = { tl: tl, dist: dist };
+                break; // If found one valid, we can stop
+             }
+          }
+          
+          if (foundValidTl) {
+            isValidLocation = true;
+            locMessage = `Tugas Luar: ${foundValidTl.tl.nama} (${Math.round(foundValidTl.dist)}m)`;
+          } else {
+             locMessage = `Di luar sekolah & area tugas luar`;
+          }
+        } else {
+             locMessage = `Di luar radius sekolah (${Math.round(distanceToSchool)}m)`;
+        }
+        
+        if (isValidLocation) {
+          locStatus.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i> ${locMessage}`;
           locStatus.className = 'alert alert-success small mb-0';
         } else {
-          locStatus.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> Di luar radius sekolah (${Math.round(distance)}m)`;
+          locStatus.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> ${locMessage}`;
           locStatus.className = 'alert alert-warning small mb-0';
         }
         
@@ -186,7 +240,7 @@ function initMap() {
         locStatus.innerHTML = '<i class="bi bi-x-circle-fill text-danger me-1"></i> Gagal mendapatkan lokasi GPS';
         locStatus.className = 'alert alert-danger small mb-0';
       },
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
     );
   }
 }
@@ -203,8 +257,17 @@ function checkReadyState() {
   if (isLocationFound) {
     const schoolLatLng = L.latLng(schoolLocation.lat, schoolLocation.lng);
     const userLatLng = L.latLng(userLocation.lat, userLocation.lng);
-    const distance = userLatLng.distanceTo(schoolLatLng);
-    isWithinRadius = distance <= maxRadius;
+    if (userLatLng.distanceTo(schoolLatLng) <= maxRadius) {
+       isWithinRadius = true;
+    } else if (activeTugasLuarList.length > 0) {
+       for (let tl of activeTugasLuarList) {
+          const tlLatLng = L.latLng(tl.lat, tl.lng);
+          if (userLatLng.distanceTo(tlLatLng) <= tl.radius) {
+             isWithinRadius = true;
+             break;
+          }
+       }
+    }
   }
   
   if (isFaceDetected && isLocationFound && isWithinRadius) {
@@ -277,15 +340,25 @@ function processAbsensi(type, btn) {
   };
   
   // Calculate Distance
-  let distance = 0;
+  let isOutside = true;
   if (userLocation) {
     const schoolLatLng = L.latLng(schoolLocation.lat, schoolLocation.lng);
     const userLatLng = L.latLng(userLocation.lat, userLocation.lng);
-    distance = userLatLng.distanceTo(schoolLatLng);
+    if (userLatLng.distanceTo(schoolLatLng) <= maxRadius) {
+       isOutside = false;
+    } else if (activeTugasLuarList.length > 0) {
+       for (let tl of activeTugasLuarList) {
+          const tlLatLng = L.latLng(tl.lat, tl.lng);
+          if (userLatLng.distanceTo(tlLatLng) <= tl.radius) {
+             isOutside = false;
+             break;
+          }
+       }
+    }
   }
   
-  if (distance > maxRadius) {
-    App.showToast('Gagal: Anda berada di luar radius sekolah!', 'error');
+  if (isOutside) {
+    App.showToast('Gagal: Anda berada di luar radius area yang diizinkan!', 'error');
     btn.innerHTML = originalHtml;
     btn.disabled = true;
     return;

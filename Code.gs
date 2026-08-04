@@ -754,10 +754,14 @@ function doPost(e) {
         if (sheetTugas) {
           const tugasData = sheetTugas.getDataRange().getValues();
           for (let i = 1; i < tugasData.length; i++) {
-            const tglMulai = tugasData[i][5];
-            const tglSelesai = tugasData[i][6];
+            let tglMulaiStr = "";
+            let tglSelesaiStr = "";
+            try {
+               tglMulaiStr = (tugasData[i][5] instanceof Date) ? Utilities.formatDate(tugasData[i][5], "Asia/Jakarta", "yyyy-MM-dd") : String(tugasData[i][5]).split('T')[0];
+               tglSelesaiStr = (tugasData[i][6] instanceof Date) ? Utilities.formatDate(tugasData[i][6], "Asia/Jakarta", "yyyy-MM-dd") : String(tugasData[i][6]).split('T')[0];
+            } catch(e) {}
             
-            if (todayIso >= tglMulai && todayIso <= tglSelesai) {
+            if (todayIso >= tglMulaiStr && todayIso <= tglSelesaiStr) {
               const pegawaiArr = (tugasData[i][7] ? tugasData[i][7].toString().split(',') : []);
               const uname = payload.username || payload.user_id || "";
               

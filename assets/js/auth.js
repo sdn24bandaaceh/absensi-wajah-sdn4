@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             setTimeout(() => {
-              window.location.href = 'dashboard.html';
+              window.location.href = 'absensi.html';
             }, 1000);
           } else {
             App.showToast(response.message || 'Username atau password salah', 'error');

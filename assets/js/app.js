@@ -1,7 +1,7 @@
 const App = {
   // PENTING: Ganti URL ini dengan URL eksekusi Web App dari Google Apps Script Anda!
   // Contoh: 'https://script.google.com/macros/s/AKfycb.../exec'
-  API_URL: 'https://script.google.com/macros/s/AKfycbzxPksuYKNasUv2TmRBKMyTZtpm0VRG615wZIcRiXL6vORnOVNsQw4wsukKpos3z280/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbyTz21eXrnbxJNF58xXCqHMy5Nqe_2sd73UvTdGdy-1OOeWINTr0NL0RYHGN-3R44m9dw/exec',
 
   init() {
     this.initDarkMode();
@@ -82,7 +82,7 @@ const App = {
 
         // Update document title
         if (profile.nama) {
-          document.title = document.title.replace('SDN 4 Banda Aceh', profile.nama).replace('SD Negeri 4 Banda Aceh', profile.nama);
+          document.title = document.title.replace('SDN 24 Banda Aceh', profile.nama).replace('SD Negeri 24 Banda Aceh', profile.nama);
         }
       } catch (e) { }
     }
@@ -496,3 +496,16 @@ const App = {
 document.addEventListener('DOMContentLoaded', () => {
   App.init();
 });
+
+// PWA Service Worker Registration
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(registration => {
+        console.log('ServiceWorker registration successful');
+      })
+      .catch(err => {
+        console.log('ServiceWorker registration failed: ', err);
+      });
+  });
+}
