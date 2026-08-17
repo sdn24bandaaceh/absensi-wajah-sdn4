@@ -325,13 +325,34 @@ function processAbsensi(type, btn) {
   btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Memproses...';
   btn.disabled = true;
   
-  // Capture photo from video
+  // Capture photo from video and compress to ~100kb
   const video = document.getElementById('camera');
   const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-  const photoData = canvas.toDataURL('image/png');
+  
+  // Resize dimensi maksimal 480px
+  const MAX_WIDTH = 480;
+  const MAX_HEIGHT = 480;
+  let width = video.videoWidth;
+  let height = video.videoHeight;
+  
+  if (width > height) {
+    if (width > MAX_WIDTH) {
+      height *= MAX_WIDTH / width;
+      width = MAX_WIDTH;
+    }
+  } else {
+    if (height > MAX_HEIGHT) {
+      width *= MAX_HEIGHT / height;
+      height = MAX_HEIGHT;
+    }
+  }
+  
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+  
+  // Gunakan image/jpeg dengan quality 0.7 (sangat menghemat ukuran dibanding png)
+  const photoData = canvas.toDataURL('image/jpeg', 0.7);
   
   // Get user from local storage
   let user = { 

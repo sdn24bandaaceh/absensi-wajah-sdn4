@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Call API
         App.fetchAPI('login', { username, password }, 'GET').then(response => {
           if (response && response.success) {
+            App.clearDatabaseCache();
             App.showToast('Login berhasil! Mengalihkan...', 'success');
             
             const user = response.user;

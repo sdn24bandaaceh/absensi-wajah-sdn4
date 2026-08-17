@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   let dbUsers = [];
   let dbAttendance = [];
-  let schoolProfile = { nama: 'SDN 4 BANDA ACEH', alamat: 'Jalan Pendidikan No. 12, Banda Aceh', kepsek: 'Nama Kepala Sekolah', nipKepsek: '19700101 200003 1 001', kopSurat: '' };
+  let schoolProfile = { nama: 'SDN 24 BANDA ACEH', alamat: 'Jalan Pendidikan No. 12, Banda Aceh', kepsek: 'Nama Kepala Sekolah', nipKepsek: '19700101 200003 1 001', kopSurat: '' };
 
   // Set default values for inputs
   const today = new Date().toISOString().split('T')[0];

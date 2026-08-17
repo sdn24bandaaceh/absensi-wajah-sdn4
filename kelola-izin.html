@@ -3,31 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kalender Akademik - Absensi Wajah SDN 4 Banda Aceh</title>
+  <title>Kelola Izin - Absensi Wajah SDN 4 Banda Aceh</title>
   
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-  <!-- FullCalendar CSS for actual calendar implementation -->
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
   
   <link rel="stylesheet" href="assets/css/style.css">
   <link rel="stylesheet" href="assets/css/dashboard.css">
-  
-  <style>
-    #calendar {
-      background: rgba(255, 255, 255, 0.5);
-      padding: 15px;
-      border-radius: 12px;
-    }
-    body.dark-mode #calendar {
-      background: rgba(15, 23, 42, 0.5);
-    }
-    .fc-theme-standard td, .fc-theme-standard th {
-      border-color: var(--glass-border);
-    }
-  </style>
   <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
 </head>
@@ -64,7 +50,7 @@
           <a class="nav-link" href="pegawai.html"><i class="bi bi-people-fill"></i> Data Pegawai</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="kelola-izin.html"><i class="bi bi-envelope-check-fill"></i> Kelola Izin</a>
+          <a class="nav-link active" href="kelola-izin.html"><i class="bi bi-envelope-check-fill"></i> Kelola Izin</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="absen-manual.html"><i class="bi bi-person-check-fill"></i> Absen Manual</a>
@@ -93,9 +79,6 @@
           <a class="nav-link" href="jam-kerja.html"><i class="bi bi-clock-fill"></i> Jam Kerja</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link active" href="kalender.html"><i class="bi bi-calendar3"></i> Kalender</a>
-        </li>
-        <li class="nav-item">
           <a class="nav-link" href="hari-libur.html"><i class="bi bi-calendar-event-fill"></i> Hari Libur</a>
         </li>
         <li class="nav-item">
@@ -118,7 +101,7 @@
         <button class="btn btn-light d-lg-none" id="sidebarToggle">
           <i class="bi bi-list"></i>
         </button>
-        <h4 class="mb-0 fw-bold">Kalender Akademik</h4>
+        <h4 class="mb-0 fw-bold">Kelola Izin & Cuti</h4>
       </div>
       
       <div class="d-flex align-items-center gap-4">
@@ -130,20 +113,88 @@
 
     <div class="container-fluid p-0">
       <div class="glass-card p-4" data-aos="fade-up">
-        <div id="calendar"></div>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="fw-bold mb-0">Daftar Pengajuan Izin Pegawai</h5>
+          <button class="btn btn-primary-custom hover-scale" onclick="loadPermitsData(true)">
+            <i class="bi bi-arrow-clockwise me-2"></i> Segarkan Data
+          </button>
+        </div>
+        
+        <div class="table-responsive">
+          <table id="tableIzin" class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Tanggal Pengajuan</th>
+                <th>Pegawai</th>
+                <th>Jenis</th>
+                <th>Mulai - Selesai</th>
+                <th>Alasan</th>
+                <th>Lampiran</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Data akan diisi oleh API -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </main>
 
+  <!-- Modal Edit Izin -->
+  <div class="modal fade" id="modalEditIzin" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content glass-card border-0">
+        <div class="modal-header border-bottom border-light">
+          <h5 class="modal-title fw-bold">Edit Pengajuan Izin</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formEditIzin">
+            <input type="hidden" id="edit_id">
+            <div class="mb-3">
+              <label class="form-label">Jenis Izin</label>
+              <select class="form-select" id="edit_tipe" required>
+                <option value="Sakit">Sakit</option>
+                <option value="Izin">Izin</option>
+                <option value="Cuti">Cuti</option>
+                <option value="Lainnya">Lainnya</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Tanggal Mulai</label>
+              <input type="date" class="form-control" id="edit_mulai" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Tanggal Selesai</label>
+              <input type="date" class="form-control" id="edit_selesai" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Alasan</label>
+              <textarea class="form-control" id="edit_alasan" rows="3" required></textarea>
+            </div>
+            <div class="text-end mt-4">
+              <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Batal</button>
+              <button type="submit" class="btn btn-primary-custom">Simpan Perubahan</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-  <!-- FullCalendar JS -->
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/id.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
   
   <script src="assets/js/app.js"></script>
   <script src="assets/js/auth.js"></script>
   <script src="assets/js/dashboard.js"></script>
-  <script src="assets/js/kalender.js"></script>
+  <script src="assets/js/kelola-izin.js"></script>
 </body>
 </html>

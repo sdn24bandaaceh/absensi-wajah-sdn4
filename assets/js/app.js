@@ -88,6 +88,32 @@ const App = {
     }
   },
 
+  clearDatabaseCache() {
+    localStorage.removeItem('app_database');
+    localStorage.removeItem('app_database_time');
+  },
+
+  async getDatabase(forceRefresh = false) {
+    const cached = localStorage.getItem('app_database');
+    const cacheTime = localStorage.getItem('app_database_time');
+    const now = new Date().getTime();
+    
+    // Gunakan cache lokal jika umurnya belum 5 menit (300000 ms)
+    if (!forceRefresh && cached && cacheTime && (now - parseInt(cacheTime) < 300000)) {
+      try {
+        return JSON.parse(cached);
+      } catch(e) { }
+    }
+    
+    // Jika tidak ada di cache atau kadaluarsa, ambil dari server
+    const response = await this.fetchAPI('getDatabase', {}, 'GET');
+    if (response && response.success) {
+      localStorage.setItem('app_database', JSON.stringify(response));
+      localStorage.setItem('app_database_time', now.toString());
+    }
+    return response;
+  },
+
   async fetchAPI(action, payload = {}, method = 'POST') {
     try {
       // Inject admin token and user ID if available
@@ -109,7 +135,14 @@ const App = {
             'Content-Type': 'text/plain;charset=utf-8',
           }
         });
-        return await response.json();
+        const result = await response.json();
+        
+        // Auto-clear local cache jika ada aksi penulisan data yang sukses
+        if (result && result.success) {
+          this.clearDatabaseCache();
+        }
+        
+        return result;
       }
     } catch (error) {
       console.error('API Error:', error);
@@ -439,7 +472,7 @@ const App = {
     const adminPages = [
       'pegawai.html', 'rekapitulasi.html', 'laporan.html',
       'geofencing.html', 'jam-kerja.html', 'hari-libur.html',
-      'pengguna.html', 'pengaturan.html'
+      'pengguna.html', 'pengaturan.html', 'foto-absensi.html'
     ];
     const userRole = localStorage.getItem('userRole') || 'pegawai';
 
@@ -465,14 +498,25 @@ const App = {
       const text = item.textContent || '';
       if (text.includes('MANAJEMEN') || text.includes('PENGATURAN')) {
         shouldHide = true;
-        item.style.display = 'none';
-        return;
+      } else if (item.tagName === 'LI' && item.classList.contains('text-muted')) {
+        shouldHide = false;
       }
+      
+      // Sembunyikan menu manajemen & pengaturan
+      if (shouldHide && item.tagName === 'LI') {
+        item.style.display = 'none';
+      }
+      
+      // Khusus untuk fitur Foto Absensi yang berada di luar grup MANAJEMEN, sembunyikan untuk non-admin
+      if (item.tagName === 'LI' && item.innerHTML.includes('foto-absensi.html')) {
+        item.style.display = 'none';
+      }
+
       if (text.includes('Logout')) {
         shouldHide = false;
         return;
       }
-      if (shouldHide || text.includes('Profil Sekolah') || text.includes('Pengaturan Sistem') || text.includes('Data Pegawai') || text.includes('Rekapitulasi') || text.includes('Laporan') || text.includes('Geofencing') || text.includes('Jam Kerja') || text.includes('Hari Libur') || text.includes('Pengguna') || text.includes('Absen Manual')) {
+      if (shouldHide || text.includes('Profil Sekolah') || text.includes('Pengaturan Sistem') || text.includes('Data Pegawai') || text.includes('Rekapitulasi') || text.includes('Laporan') || text.includes('Geofencing') || text.includes('Jam Kerja') || text.includes('Hari Libur') || text.includes('Pengguna') || text.includes('Absen Manual') || text.includes('Foto Absensi')) {
         item.style.display = 'none';
         if (item.closest('.nav-item')) item.closest('.nav-item').style.display = 'none';
       }

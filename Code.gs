@@ -283,6 +283,20 @@ function doGet(e) {
     
     // --- 2. AKSI: GET DATABASE (Sync Realtime & Auto-Migration) ---
     if (action === "getDatabase") {
+      const cache = CacheService.getScriptCache();
+      const chunksStr = cache.get("full_database_chunks");
+      if (chunksStr) {
+        const chunks = parseInt(chunksStr);
+        let cachedData = "";
+        let valid = true;
+        for(let i=0; i<chunks; i++) {
+          const chunk = cache.get("full_database_" + i);
+          if (!chunk) { valid = false; break; }
+          cachedData += chunk;
+        }
+        if (valid) return output.setContent(cachedData);
+      }
+
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       
       // Ambil data Users
@@ -367,7 +381,8 @@ function doGet(e) {
         return {
           id: row[0], username: resolvedUname, nama: resolvedNama, tipe: row[3],
           tanggalMulai: row[4], tanggalSelesai: row[5], alasan: row[6],
-          status: row[7], fileData: row[8], fileName: row[9]
+          status: row[7], fileData: row[8], fileName: row[9],
+          tanggalPengajuan: row[10] || ""
         };
       });
       
@@ -400,7 +415,7 @@ function doGet(e) {
         }));
       }
       
-      return output.setContent(JSON.stringify({
+      const jsonResponse = JSON.stringify({
         success: true,
         data: {
           users: users,
@@ -409,7 +424,18 @@ function doGet(e) {
           settings: settings,
           tugasLuar: tugasLuar
         }
-      }));
+      });
+      
+      try {
+        const chunkSize = 90000;
+        const chunks = Math.ceil(jsonResponse.length / chunkSize);
+        cache.put("full_database_chunks", chunks.toString(), 300);
+        for(let i=0; i<chunks; i++) {
+          cache.put("full_database_" + i, jsonResponse.substring(i*chunkSize, (i+1)*chunkSize), 300);
+        }
+      } catch(e) { Logger.log("Cache error: " + e); }
+      
+      return output.setContent(jsonResponse);
     }
     
     // --- AKSI: DEFAULT ---
@@ -439,6 +465,20 @@ function doPost(e) {
     const payload = JSON.parse(e.postData.contents);
     const action = payload.action;
     
+    // Hapus cache database jika ada operasi penulisan data
+    const writeActions = ["submitAttendance", "submitPermit", "addUser", "updateUser", "deleteUser", "updateSettings", "updateSchoolProfile", "addAnnouncement", "updatePermitStatus", "updatePermit", "deletePermit", "manualAttendance", "manualAttendanceMassal", "addTugasLuar", "updateTugasLuar", "deleteTugasLuar"];
+    if (writeActions.includes(action)) {
+      try {
+        const cache = CacheService.getScriptCache();
+        const chunksStr = cache.get("full_database_chunks");
+        if (chunksStr) {
+          const chunks = parseInt(chunksStr);
+          cache.remove("full_database_chunks");
+          for(let i=0; i<chunks; i++) cache.remove("full_database_" + i);
+        }
+      } catch(e) {}
+    }
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
     // Helper function to verify admin token
@@ -452,7 +492,7 @@ function doPost(e) {
     }
 
     // List of actions that require admin authorization
-    const adminActions = ["addUser", "updateUser", "deleteUser", "updateSettings", "updateSchoolProfile", "addAnnouncement", "updatePermitStatus", "manualAttendance", "addTugasLuar", "updateTugasLuar", "deleteTugasLuar"];
+    const adminActions = ["addUser", "updateUser", "deleteUser", "updateSettings", "updateSchoolProfile", "addAnnouncement", "updatePermitStatus", "updatePermit", "deletePermit", "manualAttendance", "manualAttendanceMassal", "addTugasLuar", "updateTugasLuar", "deleteTugasLuar"];
     
     if (adminActions.includes(action)) {
       if (!verifyAdminToken(payload.requestUserId, payload.adminToken)) {
@@ -917,6 +957,95 @@ function doPost(e) {
       return output.setContent(JSON.stringify({ success: true, message: "Absensi manual berhasil disimpan." }));
     }
 
+    // --- AKSI: MANUAL ATTENDANCE MASSAL ---
+    if (action === "manualAttendanceMassal") {
+      const sheetAtt = ss.getSheetByName(SHEET_ATTENDANCE);
+      const sheetUser = ss.getSheetByName(SHEET_USERS);
+      
+      const payloadDate = payload.date; // YYYY-MM-DD
+      const payloadTime = payload.time; // HH:MM
+      const timestamp = "'" + payloadDate + ", " + payloadTime + ":00";
+      const keterangan = payload.keterangan || "Hadir Massal (Admin)";
+      const status = payload.status || "";
+      
+      // Ambil daftar user aktif
+      const dataUser = sheetUser.getDataRange().getValues();
+      const activeUsers = [];
+      for (let i = 1; i < dataUser.length; i++) {
+        // Index 5: Status (Aktif/Nonaktif)
+        // Index 8: Role (admin/user/superadmin)
+        if (dataUser[i][5] !== 'Nonaktif' && dataUser[i][8] !== 'superadmin') {
+          // Index 6: Username, Index 1: Nama
+          activeUsers.push({ username: dataUser[i][6], nama: dataUser[i][1] });
+        }
+      }
+      
+      // Ambil data absen
+      const dataAtt = sheetAtt.getDataRange().getValues();
+      const userExistingRows = {};
+      for (let i = 1; i < dataAtt.length; i++) {
+        if (dataAtt[i][3] === status) {
+          const rowDate = dataAtt[i][0] ? String(dataAtt[i][0]).split(',')[0].replace("'", "").split('T')[0] : "";
+          if (rowDate === payloadDate) {
+            userExistingRows[dataAtt[i][1]] = i; // indeks array (0-based)
+          }
+        }
+      }
+      
+      let alreadyExistsCount = 0;
+      activeUsers.forEach(u => {
+        if (userExistingRows[u.username] !== undefined) {
+          alreadyExistsCount++;
+        }
+      });
+      
+      if (alreadyExistsCount > 0 && !payload.forceEdit) {
+        return output.setContent(JSON.stringify({ 
+          success: false, 
+          requireConfirmation: true, 
+          message: alreadyExistsCount + " pegawai sudah memiliki absensi " + status + " pada tanggal ini. Timpa & perbarui jam mereka?" 
+        }));
+      }
+      
+      let modifiedExisting = false;
+      const newRows = [];
+      
+      activeUsers.forEach(u => {
+        if (userExistingRows[u.username] !== undefined) {
+          if (payload.forceEdit) {
+            const rowIndex = userExistingRows[u.username];
+            dataAtt[rowIndex][0] = timestamp;
+            dataAtt[rowIndex][4] = keterangan;
+            dataAtt[rowIndex][5] = "Manual (Admin)";
+            modifiedExisting = true;
+          }
+        } else {
+          newRows.push([
+            timestamp,
+            u.username,
+            u.nama,
+            status,
+            keterangan,
+            "Manual (Admin)",
+            "N/A"
+          ]);
+        }
+      });
+      
+      // 1. Tulis ulang array ke sheet jika ada baris lama yang ditimpa
+      if (modifiedExisting) {
+        sheetAtt.getRange(1, 1, dataAtt.length, dataAtt[0].length).setValues(dataAtt);
+      }
+      
+      // 2. Tambahkan baris baru sekaligus dengan setValues (Jauh lebih cepat dari appendRow di dalam loop)
+      if (newRows.length > 0) {
+        const lastRow = getFirstEmptyRow(sheetAtt);
+        sheetAtt.getRange(lastRow, 1, newRows.length, newRows[0].length).setValues(newRows);
+      }
+      
+      return output.setContent(JSON.stringify({ success: true, message: "Absensi massal berhasil diproses untuk " + activeUsers.length + " pegawai." }));
+    }
+
     // --- AKSI: SUBMIT PERMIT (submitPermit) ---
     if (action === "submitPermit") {
       const sheet = ss.getSheetByName(SHEET_PERMITS);
@@ -939,7 +1068,8 @@ function doPost(e) {
         payload.alasan || "",
         "Menunggu Persetujuan",
         fileUrl,
-        payload.fileName || ""
+        payload.fileName || "",
+        new Date().toISOString()
       ]);
       return output.setContent(JSON.stringify({ success: true, message: "Pengajuan izin berhasil dikirim." }));
     }
@@ -961,6 +1091,55 @@ function doPost(e) {
       if (foundIndex !== -1) {
         sheet.getRange(foundIndex, 8).setValue(payload.status);
         return output.setContent(JSON.stringify({ success: true, message: "Status izin berhasil diperbarui." }));
+      } else {
+        return output.setContent(JSON.stringify({ success: false, message: "Data izin tidak ditemukan." }));
+      }
+    }
+
+    // --- AKSI: UPDATE PERMIT (updatePermit) ---
+    if (action === "updatePermit") {
+      const sheet = ss.getSheetByName(SHEET_PERMITS);
+      const data = sheet.getDataRange().getValues();
+      const targetId = parseInt(payload.id);
+      
+      let foundIndex = -1;
+      for (let i = 1; i < data.length; i++) {
+        if (parseInt(data[i][0]) === targetId) {
+          foundIndex = i + 1;
+          break;
+        }
+      }
+      
+      if (foundIndex !== -1) {
+        // Kolom di sheet Izin: 1:ID, 2:Username, 3:Nama, 4:Tipe, 5:Mulai, 6:Selesai, 7:Alasan, 8:Status
+        if (payload.tipe) sheet.getRange(foundIndex, 4).setValue(payload.tipe);
+        if (payload.tanggalMulai) sheet.getRange(foundIndex, 5).setValue(payload.tanggalMulai);
+        if (payload.tanggalSelesai) sheet.getRange(foundIndex, 6).setValue(payload.tanggalSelesai);
+        if (payload.alasan) sheet.getRange(foundIndex, 7).setValue(payload.alasan);
+        
+        return output.setContent(JSON.stringify({ success: true, message: "Data izin berhasil diperbarui." }));
+      } else {
+        return output.setContent(JSON.stringify({ success: false, message: "Data izin tidak ditemukan." }));
+      }
+    }
+
+    // --- AKSI: DELETE PERMIT (deletePermit) ---
+    if (action === "deletePermit") {
+      const sheet = ss.getSheetByName(SHEET_PERMITS);
+      const data = sheet.getDataRange().getValues();
+      const targetId = parseInt(payload.id);
+      
+      let foundIndex = -1;
+      for (let i = 1; i < data.length; i++) {
+        if (parseInt(data[i][0]) === targetId) {
+          foundIndex = i + 1;
+          break;
+        }
+      }
+      
+      if (foundIndex !== -1) {
+        sheet.deleteRow(foundIndex);
+        return output.setContent(JSON.stringify({ success: true, message: "Data izin berhasil dihapus." }));
       } else {
         return output.setContent(JSON.stringify({ success: false, message: "Data izin tidak ditemukan." }));
       }
@@ -1192,6 +1371,20 @@ function saveBase64ToDrive(base64Data, folderName, fileName) {
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - Lembar kerja tujuan
  * @param {Array} rowData - Array data yang akan disisipkan
  */
+function getFirstEmptyRow(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow === 0) return 1;
+  
+  const colA = sheet.getRange(1, 1, lastRow, 1).getValues();
+  for (let i = 1; i < colA.length; i++) {
+    const val = colA[i][0];
+    if (val === "" || val === null || String(val).trim() === "") {
+      return i + 1;
+    }
+  }
+  return lastRow + 1;
+}
+
 function smartAppendRow(sheet, rowData) {
   const lastRow = sheet.getLastRow();
   if (lastRow === 0) {
