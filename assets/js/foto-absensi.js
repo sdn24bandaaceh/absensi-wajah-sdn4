@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await App.getDatabase();
       if (res && res.success) {
         fullDatabase = res.data;
+        window._fotoAbsensiDB = fullDatabase;
         renderDailyView();
         renderMonthlyView();
       } else {
@@ -198,14 +199,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const statusClass = isLate ? 'late' : 'ontime';
         const iconClass = isLate ? 'bi-clock-history' : 'bi-check-lg';
         
-        const masukData = record.masuk ? encodeURIComponent(JSON.stringify(record.masuk)) : '';
-        const pulangData = record.pulang ? encodeURIComponent(JSON.stringify(record.pulang)) : '';
-        const userData = encodeURIComponent(JSON.stringify(u));
         const dateData = selectedDate;
 
         html += `
           <div class="col-12 col-sm-6 col-md-4 col-xl-3" data-aos="zoom-in" data-aos-duration="400">
-            <div class="photo-card" onclick="window.showPhotoDetail('${userData}', '${dateData}', '${masukData}', '${pulangData}')" style="cursor:pointer;">
+            <div class="photo-card" onclick="window.showPhotoDetail('${u.username}', '${dateData}')" style="cursor:pointer;">
               <div class="photo-container">
                 <span class="time-badge ${statusClass}">${timeStr} ${photoItem.status === 'Pulang' ? '(Plg)' : ''}</span>
                 <div class="status-icon ${statusClass}"><i class="bi ${iconClass}"></i></div>
@@ -366,13 +364,9 @@ document.addEventListener('DOMContentLoaded', () => {
           
           const statusClass = isLate ? 'late' : 'ontime';
           
-          const masukData = record.masuk ? encodeURIComponent(JSON.stringify(record.masuk)) : '';
-          const pulangData = record.pulang ? encodeURIComponent(JSON.stringify(record.pulang)) : '';
-          const userData = encodeURIComponent(JSON.stringify(u));
-          
           rowHtml += `
             <td>
-              <div class="thumb-cell" onclick="window.showPhotoDetail('${userData}', '${dateStr}', '${masukData}', '${pulangData}')">
+              <div class="thumb-cell" onclick="window.showPhotoDetail('${u.username}', '${dateStr}')">
                 <div class="thumb-wrapper">
                   ${thumbHtml}
                   <div class="tiny-status-dot ${statusClass}"></div>
@@ -395,11 +389,27 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   // Global Function for Modal
-  window.showPhotoDetail = function(userDataStr, dateStr, masukDataStr, pulangDataStr) {
+  window.showPhotoDetail = function(username, dateStr) {
     try {
-      const u = JSON.parse(decodeURIComponent(userDataStr));
-      const masuk = masukDataStr ? JSON.parse(decodeURIComponent(masukDataStr)) : null;
-      const pulang = pulangDataStr ? JSON.parse(decodeURIComponent(pulangDataStr)) : null;
+      if (!window._fotoAbsensiDB) return;
+      const db = window._fotoAbsensiDB;
+      const u = db.users.find(x => x.username === username);
+      if (!u) return;
+
+      let masuk = null;
+      let pulang = null;
+      
+      const records = db.attendance.filter(a => {
+        if (!a.timestamp) return false;
+        const aDateObj = new Date(String(a.timestamp));
+        if (isNaN(aDateObj.getTime())) return false;
+        return a.username === username && aDateObj.toISOString().split('T')[0] === dateStr;
+      });
+      
+      records.forEach(a => {
+         if (a.status === 'Masuk' || !a.status) masuk = a;
+         if (a.status === 'Pulang') pulang = a;
+      });
       
       // Update User Info
       document.getElementById('previewNama').textContent = u.nama;

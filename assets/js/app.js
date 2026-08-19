@@ -108,8 +108,12 @@ const App = {
     // Jika tidak ada di cache atau kadaluarsa, ambil dari server
     const response = await this.fetchAPI('getDatabase', {}, 'GET');
     if (response && response.success) {
-      localStorage.setItem('app_database', JSON.stringify(response));
-      localStorage.setItem('app_database_time', now.toString());
+      try {
+        localStorage.setItem('app_database', JSON.stringify(response));
+        localStorage.setItem('app_database_time', now.toString());
+      } catch (e) {
+        console.warn('Local storage quota exceeded, skipping cache.');
+      }
     }
     return response;
   },
