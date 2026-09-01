@@ -1,7 +1,8 @@
 const App = {
   // PENTING: Ganti URL ini dengan URL eksekusi Web App dari Google Apps Script Anda!
   // Contoh: 'https://script.google.com/macros/s/AKfycb.../exec'
-  API_URL: 'https://script.google.com/macros/s/AKfycbzxPksuYKNasUv2TmRBKMyTZtpm0VRG615wZIcRiXL6vORnOVNsQw4wsukKpos3z280/exec',
+  // API_URL: 'https://script.google.com/macros/s/AKfycbzxPksuYKNasUv2TmRBKMyTZtpm0VRG615wZIcRiXL6vORnOVNsQw4wsukKpos3z280/exec',
+  API_URL: 'https://absensikula.online/api.php',
 
   init() {
     this.initDarkMode();
@@ -97,14 +98,14 @@ const App = {
     const cached = localStorage.getItem('app_database');
     const cacheTime = localStorage.getItem('app_database_time');
     const now = new Date().getTime();
-    
+
     // Gunakan cache lokal jika umurnya belum 5 menit (300000 ms)
     if (!forceRefresh && cached && cacheTime && (now - parseInt(cacheTime) < 300000)) {
       try {
         return JSON.parse(cached);
-      } catch(e) { }
+      } catch (e) { }
     }
-    
+
     // Jika tidak ada di cache atau kadaluarsa, ambil dari server
     const response = await this.fetchAPI('getDatabase', {}, 'GET');
     if (response && response.success) {
@@ -140,12 +141,12 @@ const App = {
           }
         });
         const result = await response.json();
-        
+
         // Auto-clear local cache jika ada aksi penulisan data yang sukses
         if (result && result.success) {
           this.clearDatabaseCache();
         }
-        
+
         return result;
       }
     } catch (error) {
@@ -505,12 +506,12 @@ const App = {
       } else if (item.tagName === 'LI' && item.classList.contains('text-muted')) {
         shouldHide = false;
       }
-      
+
       // Sembunyikan menu manajemen & pengaturan
       if (shouldHide && item.tagName === 'LI') {
         item.style.display = 'none';
       }
-      
+
       // Khusus untuk fitur Foto Absensi yang berada di luar grup MANAJEMEN, sembunyikan untuk non-admin
       if (item.tagName === 'LI' && item.innerHTML.includes('foto-absensi.html')) {
         item.style.display = 'none';
@@ -557,3 +558,53 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+// --- SCRIPT PENGUMUMAN MIGRASI DOMAIN ---
+document.addEventListener('DOMContentLoaded', function () {
+  const oldDomain = 'absensi-wajah-sdn4.vercel.app';
+  const newDomain = 'https://sdn4.absensikula.online';
+
+  if (window.location.hostname === oldDomain || window.location.hostname.includes('vercel.app')) {
+    // Cek apakah SweetAlert sudah dimuat, jika belum, kita panggil secara dinamis
+    if (typeof Swal === 'undefined') {
+      const script = document.createElement('script');
+      script.src = "https://cdn.jsdelivr.net/npm/sweetalert2@11";
+      script.onload = showMigrationAlert;
+      document.head.appendChild(script);
+    } else {
+      showMigrationAlert();
+    }
+
+    function showMigrationAlert() {
+      Swal.fire({
+        title: '📢 Aplikasi Pindah Alamat!',
+        html: `
+                    <div style="text-align: left; font-family: 'Inter', sans-serif;">
+                        <div style="background-color: #fff3cd; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ffeeba;">
+                            Sistem Absensi kita telah <b>dipindahkan ke server baru</b> yang lebih stabil dan resmi.
+                        </div>
+                        <p>Alamat aplikasi kita yang baru adalah:<br>
+                        <b style="color: #0d6efd; font-size: 1.1em;">sdn1.absensikula.online</b></p>
+                        
+                        <hr style="margin: 15px 0; border-color: #eee;">
+                        <p style="font-size: 0.9em; margin-bottom: 8px;"><b>Tindakan Wajib Bagi Pegawai:</b></p>
+                        <ol style="font-size: 0.9em; padding-left: 20px; margin-bottom: 0;">
+                            <li style="margin-bottom: 4px;">Klik tombol biru di bawah ini.</li>
+                            <li style="margin-bottom: 4px;">Setelah web baru terbuka di browser, lakukan <b>Instal / Tambahkan ke Layar Utama</b> kembali.</li>
+                            <li>Jangan lupa Hapus (Uninstall) aplikasi absensi yang lama dari HP Anda.</li>
+                        </ol>
+                    </div>
+                `,
+        icon: 'info',
+        showCancelButton: false,
+        confirmButtonText: '🚀 Buka Aplikasi Baru',
+        confirmButtonColor: '#0d6efd',
+        allowOutsideClick: false,
+        allowEscapeKey: false
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.location.href = newDomain;
+        }
+      });
+    }
+  }
+});

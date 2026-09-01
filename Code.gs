@@ -345,9 +345,26 @@ function doGet(e) {
             attNeedsUpdate = true;
           }
         }
+        let photoData = row[6];
+        if (photoData && String(photoData).startsWith('data:image')) {
+          const rowDateStr = row[0] ? String(row[0]).split(',')[0].replace("'", "").split('T')[0] : "";
+          const rowDateObj = new Date(rowDateStr);
+          const todayDateObj = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"}));
+          
+          if (!isNaN(rowDateObj.getTime())) {
+            const diffTime = Math.abs(todayDateObj - rowDateObj);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+            
+            // Hapus Base64 jika lebih tua dari 2 hari untuk meringankan payload
+            if (diffDays > 2) {
+              photoData = ""; 
+            }
+          }
+        }
+
         return {
           timestamp: row[0], username: resolvedUname, nama: resolvedNama, status: row[3],
-          keterangan: row[4], jarak: row[5], photo: row[6]
+          keterangan: row[4], jarak: row[5], photo: photoData
         };
       });
       
@@ -1325,11 +1342,11 @@ function doPost(e) {
 /**
  * Menyimpan data Base64 ke dalam folder Google Drive
  * @param {string} base64Data - String base64 (format: data:image/png;base64,...)
- * @param {string} folderName - Nama folder utama (misal: Absensi_Photos)
+ * @param {string} folderIdOrName - ID Folder Google Drive atau nama folder sebagai fallback
  * @param {string} fileName - Nama file yang akan disimpan
  * @returns {string} URL public dari file yang disimpan
  */
-function saveBase64ToDrive(base64Data, folderName, fileName) {
+function saveBase64ToDrive(base64Data, folderIdOrName, fileName) {
   try {
     // Memisahkan header MIME type dari data base64 sebenarnya
     const dataParts = base64Data.split(',');
@@ -1340,15 +1357,19 @@ function saveBase64ToDrive(base64Data, folderName, fileName) {
     const decoded = Utilities.base64Decode(encodedData);
     const blob = Utilities.newBlob(decoded, mimeString, fileName);
     
-    // Mencari atau membuat folder utama
-    let folders = DriveApp.getFoldersByName(folderName);
     let targetFolder;
-    if (folders.hasNext()) {
-      targetFolder = folders.next();
-    } else {
-      targetFolder = DriveApp.createFolder(folderName);
-      // Membuat folder bisa diakses publik (View Only)
-      targetFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    try {
+      // Gunakan ID folder yang diberikan oleh pengguna
+      targetFolder = DriveApp.getFolderById("1nw9QISEtoRHk-tITa-udCdvDGPsSRl0b");
+    } catch(e) {
+      // Fallback: Mencari atau membuat folder utama jika ID gagal
+      let folders = DriveApp.getFoldersByName(folderIdOrName);
+      if (folders.hasNext()) {
+        targetFolder = folders.next();
+      } else {
+        targetFolder = DriveApp.createFolder(folderIdOrName);
+        targetFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      }
     }
     
     // Menyimpan file ke dalam folder
@@ -1361,6 +1382,8 @@ function saveBase64ToDrive(base64Data, folderName, fileName) {
     return file.getUrl();
   } catch (error) {
     Logger.log("Error saving to Drive: " + error.toString());
+    // Mengembalikan raw data jika upload gagal (opsional, tergantung preferensi)
+    // Tapi lebih baik return empty string agar tidak membengkak di sheets
     return "";
   }
 }
