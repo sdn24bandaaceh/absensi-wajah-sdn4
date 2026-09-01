@@ -583,7 +583,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             Sistem Absensi kita telah <b>dipindahkan ke server baru</b> yang lebih stabil dan resmi.
                         </div>
                         <p>Alamat aplikasi kita yang baru adalah:<br>
-                        <b style="color: #0d6efd; font-size: 1.1em;">sdn1.absensikula.online</b></p>
+                        <b style="color: #0d6efd; font-size: 1.1em;">sdn4.absensikula.online</b></p>
                         
                         <hr style="margin: 15px 0; border-color: #eee;">
                         <p style="font-size: 0.9em; margin-bottom: 8px;"><b>Tindakan Wajib Bagi Pegawai:</b></p>
